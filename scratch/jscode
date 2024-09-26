@@ -1,0 +1,59 @@
+let score = 0;
+let balloon = document.getElementById("balloon");
+let tower = document.getElementById("tower");
+let gameArea = document.getElementById("gameArea");
+
+let modal = document.getElementById("update");
+
+document.getElementById('startGame').onclick = function() {
+    gameArea.style.display = 'block';
+    this.style.display = "none";
+};
+
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+};
+
+document.getElementsByClassName("close")[0].onclick = function() {
+  modal.style.display = "none";
+};
+
+function moveBalloon() {
+  let x = Math.floor(Math.random() * 750);
+  let y = Math.floor(Math.random() * 250);
+  balloon.style.left = x + 'px';
+  balloon.style.top = y + 'px';
+}
+
+function checkCollision() {
+  let rect1 = balloon.getBoundingClientRect();
+  let rect2 = tower.getBoundingClientRect();
+
+  let overlap = !(rect1.right < rect2.left || 
+                  rect1.left > rect2.right || 
+                  rect1.bottom < rect2.top || 
+                  rect1.top > rect2.bottom);
+
+  if (overlap) {
+    score++;
+    document.getElementById("score").innerHTML = "Score: " + score;
+    if (score % 10 == 0) {
+        tower.style.width = tower.clientWidth+10+'px';
+        tower.style.height = tower.clientHeight+10+'px';
+    }
+    moveBalloon();
+  }
+}
+
+let gameInterval = setInterval(checkCollision, 100);
+
+modal.onclick = function() {
+  if (modal.style.display == "block") {
+    clearInterval(gameInterval);
+  }
+  else{
+    gameInterval = setInterval(checkCollision, 100);
+  }
+}

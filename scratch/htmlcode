@@ -1,0 +1,15 @@
+<div id="gameArea">
+  <div id="tower"></div>
+  <div id="balloon"></div>
+</div>
+<div id="score">Score: 0</div>
+<button id="startGame">Start Game</button>
+<div id="update">
+  <div class="update-content">
+    <span class="close">&times;</span>
+    <h2>Updates</h2>
+    <p>1. Added a start game button</p>
+    <p>2. The game will now pause when the updates box is open</p>
+    <p>3. Towers now increase in size after every 10 hits</p>
+  </div>
+</div>

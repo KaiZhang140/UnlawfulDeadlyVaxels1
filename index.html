@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Iframe Content Updater</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                    }
+                    #iframe-container {
+                        width: 100%;
+                        height: 300px;
+                        border: 1px solid #ccc;
+                        margin-bottom: 20px;
+                    }
+                    iframe {
+                        font-size:100%;
+                        width: 100%;
+                        height: 100%;
+                        border: none;
+                    }
+                    textarea {
+                        width: 100%;
+                        height: 100px;
+                    }
+                    #generation {
+                        height: 30px;
+                        width: 150px;
+                    }
+                    .controls {
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                        margin-bottom: 20px;
+                    }
+                </style>
+                <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            </head>
+            <body>
+                <div class="controls">
+                    <button id="updateButton" onclick="run()">Update Iframe</button>
+                    <button onclick="openFullscreen()">Fullscreen</button>
+                    <button onclick = "clearlocal()" id = "clearlocalStor">Clear</button>
+                </div>
+                <h1>Iframe Content Updater</h1>
+                <div id="iframe-container">
+                    <iframe id="content-iframe" style="background-color: white;"></iframe>
+                </div>
+
+                <h2>HTML</h2>
+                
+                <textarea id="html-content" placeholder="Enter HTML code"></textarea>
+                <h2>CSS</h2>
+                <textarea id="css-content" placeholder="Enter CSS code"></textarea>
+                <h2>JavaScript</h2>
+                <textarea id="js-content" placeholder="Enter JavaScript code"></textarea>
+
+                <script>
+                    var elem = document.getElementById("content-iframe");
+
+                    function openFullscreen() {
+                        if (elem.requestFullscreen) {
+                            elem.requestFullscreen();
+                        } else if (elem.webkitRequestFullscreen) { 
+                            elem.webkitRequestFullscreen();
+                        } else if (elem.msRequestFullscreen) { 
+                            elem.msRequestFullscreen();
+                        }
+                    }
+                    function clearlocal(){
+                        if (window.confirm("Do you really want to clear?")) {
+                            alert("Cleared");
+                            ${localStorage.clear()};
+                         }
+                    }
+                    function run() {
+                        
+
+                        // Construct full iframe content
+                        const fullContent = \`
+                            <!DOCTYPE html>
+                            <html lang="en">
+                            <head>
+                                <meta charset="UTF-8">
+                                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                <title>Iframe Content</title>
+                                <style>
+                                    ${localStorage.getItem("csscode")}
+                                </style>
+                            </head>
+                            <body>
+                                ${localStorage.getItem("htmlcode")}
+                                <\\script>
+                                   ${localStorage.getItem("jscode")}
+                                    
+                                    window.onerror = function(message, source, lineno, colno, error) {
+                                        parent.postMessage("Iframe error: " + message + source + lineno);
+                                        return true; // Prevent the default browser error handling
+                                        
+                                    };
+                                <\\/script>
+                            </body>
+                            </html>
+                        \`;
+
+                        // Write content to iframe
+                        const iframe = document.getElementById('content-iframe');
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                        iframeDoc.open();
+                        iframeDoc.write('');
+                        iframeDoc.close();
+
+                        iframeDoc.open();
+                        iframeDoc.write(fullContent);
+                        iframeDoc.close();
+
+                        // Listen for messages from iframe
+                        window.addEventListener('message', function(event) {
+                            if (typeof event.data === 'string' && event.data.startsWith('Iframe error:')) {
+
+                                console.log(event.data);
+                                // Handle iframe errors
+                                
+                                //try it 
+                                
+                            }
+                        });
+                    }
+                </script>
+            </body>
+            </html>

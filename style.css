@@ -1,0 +1,27 @@
+UnlawfulDeadlyVoxels/
+├── index.ts
+├── index.html
+├── script.js
+├── index.php
+html, body {
+  overflow:hidden;
+  touch-action: none;
+  -ms-touch-action: none;
+  position:relative;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  max-width: 1;
+  max-height: 1;
+}
+
+#content-list div {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin: 5px 0;
+}
+
+#funny {
+  color: red;
+  font-weight: bold;
+}
