@@ -10,11 +10,285 @@ import path from "path";
 const port = "3000";
 const app = express();
 const mySecret = process.env["OPENAI_API_KEY"];
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dataFilePath = path.join(__dirname, "data.json");
 const jsonData = readJSONFile(dataFilePath);
 var additionalcomments = "";
+
+
+
+//iframe stuff
+
+app.get("/", (req, res) => {
+  const dataFilePath = path.join(__dirname, "data.json");
+  const errorFilePath = path.join(__dirname, "errors.json");
+
+  // Reading JSON data from file
+  const jsonData = readJSONFile(dataFilePath);
+
+  if (jsonData.length > 0) {
+    var title = jsonData[jsonData.length - 1].title;
+    var htmlcode = jsonData[jsonData.length - 1].html;
+    var csscode = jsonData[jsonData.length - 1].css;
+    var jscode = jsonData[jsonData.length - 1].javascript;
+  } else {
+    var title = "" as any;
+    var htmlcode = "" as any;
+    var csscode = "" as any;
+    var jscode = "" as any;
+  }
+  var revert = 2;
+    if(htmlcode&&jscode&&csscode){
+    while(htmlcode == "" || csscode == "" || jscode == "" || htmlcode.includes("rest of code")|| csscode.includes("rest of code") || jscode.includes("rest of code")){
+    var htmlcode = jsonData[jsonData.length - revert].html;
+    var csscode = jsonData[jsonData.length - revert].css;
+    var jscode = jsonData[jsonData.length - revert].javascript;
+    revert++;
+    }
+  }
+  app.use(express.json());
+  app.post("/submit-comments", (req, res) => {
+    additionalcomments = req.body.additionalcomments;
+    console.log("Received additional comments:", additionalcomments);
+    const allData = {
+      suggestions: additionalcomments
+    };
+    // Add the new data
+    addData(allData,"errors.json");
+    
+    res.sendStatus(200); // Respond with a success status
+  });
+  app.post("/confirm-and-run", (req, res) => {
+    const gametype = req.body.data
+    updates(gametype);
+    res.sendStatus(200); // Send a success response
+  });
+  app.post("/revert",(req,res)=>{
+    revertjson();
+    res.sendStatus(200);
+  })
+  
+
+  
+  res.send(`
+        <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Iframe Content Updater</title>
+                <style>
+                    ${csscode}
+                    * {
+                      margin: 0;
+                      padding: 0;
+                      box-sizing: border-box;
+                      font-family: 'Roboto', sans-serif;
+                    }
+                    #addbut{
+                    position:relative;
+                    z-index:10000;
+                    left:5px;
+                    top: -15px;
+                    display:flex;
+                    justify-content:center;
+                    align-items:center;
+                    flex-direction:row;
+                    
+                    gap:5px;
+          
+                    }
+                    #dbut2{
+                      position: absolute;
+                      z-index:10000;
+                     
+                      right:5px;
+                      bottom:5px;
+                      display:flex;
+                      justify-content:center;
+                      align-items:center;
+                      flex-direction:row;
+                      width: 300px;
+                      flex-wrap:wrap;
+                      gap:5px;
+
+                    }
+                    button {
+                      padding: 10px 20px;
+                      background-color: #0072ff;
+                      color: white;
+                      border: none;
+                      border-radius: 5px;
+                      cursor: pointer;
+                      transition: background-color 0.3s;
+                    }
+
+                    button:hover {
+                      background-color: #005bb5;
+                    }
+                    .ctextarea {
+                      width: 300px;
+                      height: 750px;
+                      z-index:10000;
+                    }
+                    #siteheader {
+                    font-size: 2rem;
+                    font-weight: bold;
+                      margin-bottom: 40px;
+                      background: radial-gradient(circle at 44.1% 78.8%, #071931 0%, #374f62 99.4%);
+                      color: white;
+                      display: flex;
+                      align-items: center;
+                      
+                      padding-right: 50px;
+                      position: relative;
+                      top: 0;
+                      left: 0;
+                      justify-content: center;
+                      z-index: 1000;
+                      width: 100%;
+                      height: 100px;
+                      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+                      transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, height 0.3s;
+                    }
+                    #gameWindow{
+                    padding:3px;
+                    }
+                </style>
+                <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            </head>
+            <body>
+            <div id="siteheader">
+                <span>Kamavy Studios</span>
+            </div>
+              <div id = "addbut"><button id = "sendadditional" onclick = "send(true)">Send Comments</button>
+              <button id = "confirmRunButton">UPDATE</button>
+              <button id = "revertButton">REVERT</button>
+               <button onclick="openFullscreen()">Fullscreen</button>
+              
+              </div>
+               <div id = "dbut2"><textarea id="additional" placeholder="Enter additional comments"></textarea>
+              <textarea id="gametype" placeholder = "Put the type of game you want to have.">${title}</textarea></div>
+                ${htmlcode}
+                <!--<div class="controls">
+                    <button id="updateButton" onclick="run()">Update Iframe</button>
+                    
+                    <button onclick="openFullscreen()">Fullscreen</button>
+                    <button onclick = "clearlocal()" id = "clearlocalStor">Clear</button>
+                </div>
+                <h1>Iframe Content Updater</h1>
+
+
+                <h2>HTML</h2>
+
+                <textarea id="html-content" placeholder="Enter HTML code"></textarea>
+                <h2>CSS</h2>
+                <textarea id="css-content" placeholder="Enter CSS code"></textarea>
+                <h2>JavaScript</h2>
+                <textarea id="js-content" placeholder="Enter JavaScript code"></textarea>-->
+                
+              <script>
+              function openFullscreen() {
+    var elem = document.getElementById("gameWindow"); // This will select the entire HTML document
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { // Safari
+        elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { // IE/Edge
+        elem.msRequestFullscreen();
+    }
+}
+
+              function send(bool){
+                if(bool == true){
+                    var additional = document.getElementById("additional").value;
+                    additionalcomments = additional;
+                    
+                }
+              else{
+                var additional = bool;
+                additionalcomments = additional;
+                
+              }
+
+                  $.ajax({
+                    type: "POST",
+                    url: "/submit-comments",
+                    contentType: "application/json",
+                    data: JSON.stringify({ additionalcomments: additionalcomments }),
+                    success: function(response) {
+                      console.log("Data sent successfully:", response);
+                    },
+                    error: function(error) {
+                      console.error("Error sending data:", error);
+                    }
+                  });
+                }
+                document.getElementById("confirmRunButton").onclick = function() {
+                  $.ajax({
+                    type: "POST",
+                    url: "/confirm-and-run",
+                    success: function(response) {
+                      console.log("Confirm and run initiated successfully:", response);
+                    },
+                    contentType: "application/json",
+                      data: JSON.stringify({ data: document.getElementById("gametype").value }),
+                    error: function(error) {
+                      console.error("Error initiating confirm and run:", error);
+                    }
+                  });
+                };
+                document.getElementById("revertButton").onclick = function() {
+                
+                  $.ajax({
+                    type: "POST",
+                    url: "/revert",
+                    success: function(response) {
+                      console.log("Confirm and run initiated successfully:", response);
+                    },
+                    error: function(error) {
+                      console.error("Error initiating confirm and run:", error);
+                    }
+                  });
+                };
+                window.onerror = function(message, source, lineno, colno, error) {
+                    lineno2 = lineno-181;
+
+                    bool =  "Line:" + lineno2 + "Column:" + colno + error;   
+                    
+                    send(bool)
+                };
+              </script>
+              <script>
+                
+                var additionalcomments = "";
+               
+                
+                ${jscode}
+                
+                 
+                 
+                
+                
+               
+              </script>
+              <br>
+              <textarea class = "ctextarea">${htmlcode}</textarea>
+                <textarea class = "ctextarea">${csscode}</textarea>
+                <textarea class = "ctextarea">${jscode}</textarea>
+            </body>
+           </html>
+`);
+  
+  
+});
+
+app.listen(port, () => {
+  console.log(`Server is running at http://localhost:${port}`);
+
+});
 
 if (jsonData.length == 0) {
 
@@ -40,15 +314,15 @@ if (jsonData.length == 0) {
     },
     {
       role: "user",
-      content: "Can you design a Tower Defense Game",
+      content: "Can you design a gamewindow with some elements?",
       //"Can you make a HTML, CSS, and Javascript code for a game that uses WASD to move? "
     },
   ];
 
   let GPT4 = async (message) => {
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      temperature: 0.2, 
+      model: "gpt-4o",
+      temperature: 0.4, 
       messages: message,
     });
 
@@ -109,6 +383,7 @@ if (jsonData.length == 0) {
   console.log(js);
   console.log("\nENDOFJS\n");
   const allData = {
+    title: "",
     html: html,
     css: css,
     javascript: js,
@@ -119,215 +394,34 @@ if (jsonData.length == 0) {
 } else {
   console.log("Data.json is not empty, skipping initial data generation");
 }
+// function confirmAndRun(): void {
+//   const rl = readline.createInterface({
+//     input: process.stdin,
+//     output: process.stdout,
+//   });
 
-//iframe stuff
-app.get("/", (req, res) => {
-  const dataFilePath = path.join(__dirname, "data.json");
-  const errorFilePath = path.join(__dirname, "errors.json");
+//   rl.question(
+//     "\nDo you want to UPDATE? Type 'yes' to confirm: ",
+//     (answer) => {
+//       if (answer.toLowerCase() === "yes") {
+//         updates();
+//       } else {
+//         console.log("Action cancelled.");
+//       }
+//       rl.close();
+//     },
+//   );
+// }
 
-  // Reading JSON data from file
-  const jsonData = readJSONFile(dataFilePath);
-
-  if (jsonData.length > 0) {
-    var htmlcode = jsonData[jsonData.length - 1].html;
-    var csscode = jsonData[jsonData.length - 1].css;
-    var jscode = jsonData[jsonData.length - 1].javascript;
-  } else {
-    console.error("Failed to read JSON data from file.");
-  }
-  var revert = 2;
-    if(htmlcode&&jscode&&csscode){
-    while(htmlcode == "" || csscode == "" || jscode == "" || htmlcode.includes("rest of code")|| csscode.includes("rest of code") || jscode.includes("rest of code")){
-    var htmlcode = jsonData[jsonData.length - revert].html;
-    var csscode = jsonData[jsonData.length - revert].css;
-    var jscode = jsonData[jsonData.length - revert].javascript;
-    revert++;
-    }
-  }
-  app.use(express.json());
-  app.post("/submit-comments", (req, res) => {
-    additionalcomments = req.body.additionalcomments;
-    console.log("Received additional comments:", additionalcomments);
-    const allData = {
-      suggestions: additionalcomments
-    };
-    // Add the new data
-    addData(allData,"errors.json");
-    
-    res.sendStatus(200); // Respond with a success status
-  });
-  app.post("/confirm-and-run", (req, res) => {
-    updates();
-    res.sendStatus(200); // Send a success response
-  });
-  app.post("/revert",(req,res)=>{
-    revertjson();
-    res.sendStatus(200);
-  })
-  
-  res.send(`
-        <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Iframe Content Updater</title>
-                <style>
-                    ${csscode}
-                    #addbut{
-                    position: absolute;
-                    z-index:10000;
-                    right:0;
-                    bottom:0;
-                    }
-                    .ctextarea {
-                      width: 300px;
-                      height: 750px;
-                      z-index:10000;
-                    }
-                </style>
-                <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-            </head>
-            <body>
-            
-              <div id = "addbut"><button id = "sendadditional" onclick = "send(true)">Send Comments</button>
-              <button id = "confirmRunButton">UPDATE</button>
-              <button id = "revertButton">REVERT</button>
-              
-              <textarea id="additional" placeholder="Enter additional comments"></textarea></div>
-                ${htmlcode}
-                <!--<div class="controls">
-                    <button id="updateButton" onclick="run()">Update Iframe</button>
-                    
-                    <button onclick="openFullscreen()">Fullscreen</button>
-                    <button onclick = "clearlocal()" id = "clearlocalStor">Clear</button>
-                </div>
-                <h1>Iframe Content Updater</h1>
-
-
-                <h2>HTML</h2>
-
-                <textarea id="html-content" placeholder="Enter HTML code"></textarea>
-                <h2>CSS</h2>
-                <textarea id="css-content" placeholder="Enter CSS code"></textarea>
-                <h2>JavaScript</h2>
-                <textarea id="js-content" placeholder="Enter JavaScript code"></textarea>-->
-                
-              <script>
-              function send(bool){
-                if(bool == true){
-                    var additional = document.getElementById("additional").value;
-                    additionalcomments = additional;
-                    
-                }
-              else{
-                var additional = bool;
-                additionalcomments = additional;
-                
-              }
-
-                  $.ajax({
-                    type: "POST",
-                    url: "/submit-comments",
-                    contentType: "application/json",
-                    data: JSON.stringify({ additionalcomments: additionalcomments }),
-                    success: function(response) {
-                      console.log("Data sent successfully:", response);
-                    },
-                    error: function(error) {
-                      console.error("Error sending data:", error);
-                    }
-                  });
-                }
-                document.getElementById("confirmRunButton").onclick = function() {
-                  $.ajax({
-                    type: "POST",
-                    url: "/confirm-and-run",
-                    success: function(response) {
-                      console.log("Confirm and run initiated successfully:", response);
-                    },
-                    error: function(error) {
-                      console.error("Error initiating confirm and run:", error);
-                    }
-                  });
-                };
-                document.getElementById("revertButton").onclick = function() {
-                
-                  $.ajax({
-                    type: "POST",
-                    url: "/revert",
-                    success: function(response) {
-                      console.log("Confirm and run initiated successfully:", response);
-                    },
-                    error: function(error) {
-                      console.error("Error initiating confirm and run:", error);
-                    }
-                  });
-                };
-                window.onerror = function(message, source, lineno, colno, error) {
-
-
-                    bool = message + source + lineno+ colno + error;   
-                    send(bool)
-                };
-              </script>
-              <script>
-                
-                var additionalcomments = "";
-                
-                
-                ${jscode}
-                
-                 
-                 
-                
-                
-               
-              </script>
-              <br>
-              <textarea class = "ctextarea">${htmlcode}</textarea>
-                <textarea class = "ctextarea">${csscode}</textarea>
-                <textarea class = "ctextarea">${jscode}</textarea>
-            </body>
-           </html>
-`);
-  
-  
-});
-
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-
-});
-
-
-function confirmAndRun(): void {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  rl.question(
-    "\nDo you want to UPDATE? Type 'yes' to confirm: ",
-    (answer) => {
-      if (answer.toLowerCase() === "yes") {
-        updates();
-      } else {
-        console.log("Action cancelled.");
-      }
-      rl.close();
-    },
-  );
-}
-
-// Running the confirmation function
-confirmAndRun();
-function updates(): void {
+// // Running the confirmation function
+// confirmAndRun();
+function updates(updatetype:string) {
+  console.log(updatetype)
   console.log("Started updating");
 
   const dataFilePath = path.join(__dirname, "data.json");
   const errorFilePath = path.join(__dirname, "errors.json");
-  var htmlupdate, cssupdate, javascriptupdate;
+  var title, htmlupdate, cssupdate, javascriptupdate;
 
   // Accessing specific values
   const jsonData = readJSONFile(dataFilePath);
@@ -342,12 +436,29 @@ function updates(): void {
   console.log(allsuggestions)
   // Accessing specific values
   if (jsonData) {
+    title = jsonData[jsonData.length - 1].title;
     htmlupdate = jsonData[jsonData.length - 1].html;
     cssupdate = jsonData[jsonData.length - 1].css;
     javascriptupdate = jsonData[jsonData.length - 1].javascript;
     console.log("\n"+allsuggestions+ "\n\nadditional comments logged\n");
   } else {
     console.error("Failed to read JSON data from file.");
+  }
+  if (title != updatetype){
+    console.log("Title is not the same as the update type, making new game");
+    for (let i = jsonData.length-1; i > 0; i--){
+      if(jsonData[i].title == updatetype){
+        htmlupdate = jsonData[i].html;
+        cssupdate = jsonData[i].css;
+        javascriptupdate = jsonData[i].javascript;
+        break
+      } else{
+        htmlupdate = jsonData[0].html;
+        cssupdate = jsonData[0].css;
+        javascriptupdate = jsonData[0].javascript;
+      }
+    }
+    
   }
   var revert = 2;
     while(htmlupdate == "" || cssupdate == "" || javascriptupdate == "" || htmlupdate.includes("rest of code")|| cssupdate.includes("rest of code") || javascriptupdate.includes("rest of code")){
@@ -365,16 +476,16 @@ function updates(): void {
   const openai = new OpenAI({
     apiKey: mySecret,
   });
-
+  
   const GPT4Message = [
     {
       role: "system",
-      content: "You are creating a game similar to Bloons TD. Generate the complete code without omitting any parts. Always include HTML, CSS, and JavaScript code as needed, in that order. Use '```html' for HTML, '```css' for CSS, and '```javascript' for JavaScript, ending each section with '```'. For the HTML section, include only the code within the <body> tags.Do not include explanations, titles, comments, or anything that could cause errors. Never use images, instead use colored divs. Analyze existing code to identify non-repetitive features and make creative updates that enhance gameplay and mechanics. Ensure that your code is error-free, defines variables accurately, and does not shorten the original code. Include an update menu that displays updates, pauses the game when opened, and provides a simple way to close it.",
+      content: "Generate the complete code for HTML, CSS, and Javascript without omitting any parts at all. Always include HTML, CSS, and JavaScript code as needed, in that order. Fix any bugs that have a provided line number (in the Javascript code) and column number. If the previous code doesn't need to be changed, put it in anyway. Use '```html' for HTML, '```css' for CSS, and '```javascript' for JavaScript, ending each section with '```'. For the HTML section, include only the code within the <body> tags.Do not include explanations, titles, comments, or anything that could cause errors. Never use images, instead use colored divs. Analyze existing code to identify non-repetitive features and make creative updates that enhance gameplay and mechanics. Ensure that your code is error-free, defines variables accurately, and does not shorten the original code. Include an update menu that displays updates, pauses the game when opened, and provides a simple way to close it.",
     },
     {
       role: "user",
       content:
-        ` Improve and debug the tower Defense Game using this code: ` +
+        ` Improve and debug the ${updatetype} using this code: ` +
         "\n```\n" +
         `HTML: ` +
         "\n```\n" +
@@ -396,7 +507,8 @@ function updates(): void {
 
   let GPT4 = async (message) => {
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
+      temperature: 0.4,
       messages: message,
     });
 
@@ -452,7 +564,7 @@ function updates(): void {
           .trim();
       }
     }
-    confirmAndRun()
+
     clearjson(errorFilePath);
 
     //THE FOLLOWING CODE IS USED TO do the {...} thing but it currently does not work
@@ -533,6 +645,7 @@ function updates(): void {
     //summon kai zhang im here kai zhang
 
     const allData = {
+      title: updatetype,
       html: html2,
       css: css2,
       javascript: js2,
@@ -540,6 +653,7 @@ function updates(): void {
     // Add the new data
     addData(allData,"data.json");
   })();
+  
 }
 function revertjson(): void{
   const errorFilePath = path.join(__dirname, "errors.json");
